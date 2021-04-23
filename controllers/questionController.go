@@ -62,6 +62,27 @@ func CreateIndexIfDoesNotExists(ctx context.Context, client *elastic.Client, ind
 // Insert a question
 func InsertQuestion(ctx context.Context, elasticClient *elastic.Client) {
 	// Insert data in elasticSearch
+	var questionList []Question
+	for index := 1; index < 5; index++ {
+		question := Question{
+			Title:    fmt.Sprintf("Hey can I use this one, test number %d", index),
+			Content:  fmt.Sprintf("U can use it in one condition reje3ha ya weld l3ahira, test number %d", index),
+			Distance: fmt.Sprintf("Casablanca, test number %d", index),
+		}
+
+		questionList = append(questionList, question)
+	}
+
+	for _, questionObj := range questionList {
+		_, err := elasticClient.Index().Index(indexName).Type(docType).BodyJson(questionObj).Do(ctx)
+		if err != nil {
+			fmt.Printf("Question title: %s, Content: %s, Location: %s", questionObj.Title, questionObj.Content, questionObj.Distance)
+			continue
+		}
+	}
+
+	// Flush data (refreshing data in the index) after this we can do get
+	elasticClient.Flush().Index(indexName).Do(ctx)
 }
 
 // Helper function to convert the response to an Array of questions
