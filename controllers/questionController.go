@@ -1,114 +1,112 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
+	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/olivere/elastic/v7"
+	"github.com/teris-io/shortid"
 )
 
 const (
-	indexName = "questions_index"
-	docType   = "question"
+	elasticIndexName = "questions"
+	elasticTypeName  = "question"
 )
 
 type Question struct {
-	Title    string `json:"title"`
-	Content  string `json:"content"`
-	Distance string `json:"distance"`
+	ID       string  `json:"id"`
+	Title    string  `json:"title"`
+	Content  string  `json:"content"`
+	Distance float64 `josn:"distance"`
 }
 
-// Ping function to ping the elasticsearch server
-func ping(ctx context.Context, client *elastic.Client, url string) error {
-	// Ping the elastic search server
-	if client != nil {
-		info, code, err := client.Ping(url).Do(ctx)
-		if err != nil {
-			return err
-		}
+type QuestionRequest struct {
+	Title    string  `json:"title"`
+	Content  string  `json:"content"`
+	Distance float64 `json:"distance"`
+}
 
-		fmt.Printf("ElasticSearch returned with code %d and version %s\n", code, info.Version.Number)
-		return nil
+type QuestionResponse struct {
+	Title    string  `json:"title"`
+	Content  string  `json:"content"`
+	Distance float64 `json:"distance"`
+}
+
+type SearchResponse struct {
+	Title     string     `json:"title"`
+	Content   string     `json:"content"`
+	Hits      string     `json:"hits"`
+	Questions []Question `json:"questions"`
+}
+
+var elasticClient *elastic.Client
+
+func PostQuestionEndpoint(c *gin.Context) {
+	// Parse request
+	var qsts []Question
+
+	if err := c.BindJSON(&qsts); err != nil {
+		errorResponse(c, http.StatusBadRequest, "Malformed request body")
+		return
 	}
-	return errors.New("Elastic Client is nil")
+
+	// Inset document in bulk
+	bulk := elasticClient.Bulk().Index(elasticIndexName).Type(elasticTypeName)
+
+	for _, q := range qsts {
+		qst := Question{
+			ID:       shortid.MustGenerate(),
+			Title:    q.Title,
+			Content:  q.Content,
+			Distance: q.Distance,
+		}
+		bulk.Add(elastic.NewBulkIndexRequest().Id(qst.ID).Doc(qst))
+	}
+	if _, err := bulk.Do(c.Request.Context()); err != nil {
+		log.Println(err)
+		errorResponse(c, http.StatusInternalServerError, "Failed to create questions")
+	}
+	c.Status(http.StatusOK)
 }
 
-// Create ElasticSearch index if its not exists
-func CreateIndexIfDoesNotExists(ctx context.Context, client *elastic.Client, indexName string) error {
-	exists, err := client.IndexExists(indexName).Do(ctx)
+func SearchEndpoint(c *gin.Context) {
+	// Parse the request
+	query := c.Query("query")
+	if query == "" {
+		errorResponse(c, http.StatusBadRequest, "Query Not specified")
+		return
+	}
+
+	// Perform the search
+	esQuery := elastic.NewMultiMatchQuery(query, "title", "content").Fuzziness("2").MinimumShouldMatch("2")
+	result, err := elasticClient.Search().Index(elasticIndexName).Query(esQuery).Do(c.Request.Context())
 	if err != nil {
-		return err
+		log.Println(err)
+		errorResponse(c, http.StatusInternalServerError, "Something went wrong")
+		return
 	}
 
-	if exists {
-		return nil
+	res := SearchResponse{
+		Hits: fmt.Sprintf("%d", result.Hits.TotalHits),
 	}
 
-	res, err := client.CreateIndex(indexName).Do(ctx)
-
-	if err != nil {
-		return err
+	// Transform search result before returning them
+	qsts := make([]QuestionResponse, 0)
+	for _, hit := range result.Hits.Hits {
+		var qst QuestionResponse
+		json.Unmarshal(hit.Source, &qst)
+		qsts = append(qsts, qst)
 	}
-
-	if !res.Acknowledged {
-		return errors.New("Created index was not acknowledged. Check that timeout value is correct")
-	}
-	return nil
+	res.Questions = qsts
+	c.JSON(http.StatusOK, res)
 }
 
-// Insert a question
-func InsertQuestion(ctx context.Context, elasticClient *elastic.Client) {
-	// Insert data in elasticSearch
-	var questionList []Question
-	for index := 1; index < 5; index++ {
-		question := Question{
-			Title:    fmt.Sprintf("Hey can I use this one, test number %d", index),
-			Content:  fmt.Sprintf("U can use it in one condition reje3ha ya weld l3ahira, test number %d", index),
-			Distance: fmt.Sprintf("Casablanca, test number %d", index),
-		}
-
-		questionList = append(questionList, question)
-	}
-
-	for _, questionObj := range questionList {
-		_, err := elasticClient.Index().Index(indexName).Type(docType).BodyJson(questionObj).Do(ctx)
-		if err != nil {
-			fmt.Printf("Question title: %s, Content: %s, Location: %s", questionObj.Title, questionObj.Content, questionObj.Distance)
-			continue
-		}
-	}
-
-	// Flush data (refreshing data in the index) after this we can do get
-	elasticClient.Flush().Index(indexName).Do(ctx)
-}
-
-// Helper function to convert the response to an Array of questions
-func _convertSearchResultToQuestions(searchResult *elastic.SearchResult) []Question {
-	var result []Question
-
-	for _, hit := range searchResult.Hits.Hits {
-		var questionObj Question
-		err := json.Unmarshal(hit.Source, &questionObj)
-		if err != nil {
-			log.Println("Can't deserialize 'question' object: %s\n", err.Error())
-			continue
-		}
-		result = append(result, questionObj)
-	}
-	return result
-}
-
-// Get all the questions and try to sort them by distance
-func GetAll(ctx context.Context, elasticClient *elastic.Client) []Question {
-	query := elastic.MatchAllQuery{}
-
-	searchResult, err := elasticClient.Search().Index(indexName).Query(query).Do(ctx)
-	if err != nil {
-		fmt.Printf("Error during execution GetAll: %s\n", err.Error())
-	}
-
-	return _convertSearchResultToQuestions(searchResult)
+// A helper function to response for errors
+func errorResponse(c *gin.Context, code int, err string) {
+	c.JSON(code, gin.H{
+		"error": err,
+	})
 }
