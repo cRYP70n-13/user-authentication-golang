@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//UserRoutes function
+// UserRoutes function
 func UserRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.Use(middleware.Authentication())
 	incomingRoutes.GET("/users", controller.GetUsers())
