@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"user-athentication-golang/models"
 	routes "user-athentication-golang/routes"
 
 	"github.com/gin-gonic/gin"
@@ -26,33 +27,6 @@ var (
 	elasticClient *elastic.Client
 )
 
-type Question struct {
-	ID        string        `json:"id"`
-	Title     string        `json:"title"`
-	CreatedAt time.Time     `json:"created_at"`
-	Content   string        `json:"content"`
-	Location  time.Location `json:"location"`
-}
-
-type QuestionRequest struct {
-	Title    string        `json:"title"`
-	Content  string        `json:"content"`
-	Location time.Location `json:"location"`
-}
-
-type QuestionResponse struct {
-	Title     string        `json:"title"`
-	CreatedAt time.Time     `json:"created_at"`
-	Content   string        `json:"content"`
-	Location  time.Location `json:"location"`
-}
-
-type SearchResponse struct {
-	Time      string             `json:"time"`
-	Hits      string             `json:"hits"`
-	Questions []QuestionResponse `json:"documents"`
-}
-
 // Helper function to make costume errors
 func errorResponse(c *gin.Context, code int, err string) {
 	c.JSON(code, gin.H{
@@ -62,7 +36,7 @@ func errorResponse(c *gin.Context, code int, err string) {
 
 // The function to create a questions
 func CreateQuestionEndpoint(c *gin.Context) {
-	var questions []QuestionRequest
+	var questions []models.QuestionRequest
 	if err := c.BindJSON(&questions); err != nil {
 		errorResponse(c, http.StatusBadRequest, "Malformed request body")
 		return
@@ -70,7 +44,7 @@ func CreateQuestionEndpoint(c *gin.Context) {
 
 	bulk := elasticClient.Bulk().Index(elasticIndexName).Type(elasticIndexType)
 	for _, d := range questions {
-		qst := Question{
+		qst := models.Question{
 			ID:        shortid.MustGenerate(),
 			Title:     d.Title,
 			CreatedAt: time.Now().UTC(),
@@ -118,13 +92,13 @@ func searchEndpoint(c *gin.Context) {
 		return
 	}
 
-	res := SearchResponse{
+	res := models.SearchResponse{
 		Time: fmt.Sprintf("%d", result.TookInMillis),
 		Hits: fmt.Sprintf("%d", result.Hits.TotalHits),
 	}
-	docs := make([]QuestionResponse, 0)
+	docs := make([]models.QuestionResponse, 0)
 	for _, hit := range result.Hits.Hits {
-		var doc QuestionResponse
+		var doc models.QuestionResponse
 		json.Unmarshal(hit.Source, &doc)
 		docs = append(docs, doc)
 	}
