@@ -1,17 +1,25 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
 	"os"
+	"strconv"
+	"time"
 
 	routes "user-athentication-golang/routes"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/heroku/x/hmetrics/onload"
+	"github.com/olivere/elastic/v7"
+	"github.com/teris-io/shortid"
 )
 
 const (
 	elasticIndexName = "question_index"
-	ealsticIndexType = "question"
+	elasticIndexType = "question"
 )
 
 var (
@@ -140,7 +148,7 @@ func main() {
 	}
 
 	if port == "" {
-		port = "8000"
+		port = "8080"
 	}
 
 	router := gin.New()
@@ -160,10 +168,10 @@ func main() {
 	})
 
 	// Elastic Search part
-	r := gin.Default()
-	r.POST("/documents", CreateQuestionEndpoint)
-	r.GET("/search", searchEndpoint)
-	if err = r.Run(":8080"); err != nil {
+	// r := gin.Default()
+	router.POST("/documents", CreateQuestionEndpoint)
+	router.GET("/search", searchEndpoint)
+	if err = router.Run(":8080"); err != nil {
 		log.Fatal(err)
 	}
 
