@@ -54,7 +54,32 @@ func CreateQuestionEndpoint(c *gin.Context) {
 	}
 	if _, err := bulk.Do(c.Request.Context()); err != nil {
 		log.Println(err)
-		errorResponse(c, http.StatusInternalServerError, "Failed to create documents")
+		errorResponse(c, http.StatusInternalServerError, "Failed to post questions")
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+// The function to create a questions
+func PostAnswer(c *gin.Context) {
+	var answers []models.Answer
+	if err := c.BindJSON(&answers); err != nil {
+		errorResponse(c, http.StatusBadRequest, "Malformed request body")
+		return
+	}
+
+	bulk := elasticClient.Bulk().Index(elasticIndexName).Type(elasticIndexType)
+	for _, d := range answers {
+		ans := models.Answer{
+			ID:     shortid.MustGenerate(),
+			Title:  d.Title,
+			Answer: d.Answer,
+		}
+		bulk.Add(elastic.NewBulkIndexRequest().Id(ans.ID).Doc(ans))
+	}
+	if _, err := bulk.Do(c.Request.Context()); err != nil {
+		log.Println(err)
+		errorResponse(c, http.StatusInternalServerError, "Failed to post answers")
 		return
 	}
 	c.Status(http.StatusOK)
@@ -143,6 +168,7 @@ func main() {
 
 	// Elastic Search part
 	router.POST("/questions", CreateQuestionEndpoint)
+	router.POST("/answers", PostAnswer)
 	router.GET("/search", searchEndpoint)
 	if err = router.Run(":8080"); err != nil {
 		log.Fatal(err)
