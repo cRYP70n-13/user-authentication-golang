@@ -168,8 +168,7 @@ func main() {
 	})
 
 	// Elastic Search part
-	// r := gin.Default()
-	router.POST("/documents", CreateQuestionEndpoint)
+	router.POST("/questions", CreateQuestionEndpoint)
 	router.GET("/search", searchEndpoint)
 	if err = router.Run(":8080"); err != nil {
 		log.Fatal(err)
