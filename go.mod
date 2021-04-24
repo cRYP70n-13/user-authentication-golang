@@ -9,7 +9,7 @@ require (
 	github.com/go-playground/validator/v10 v10.2.0
 	github.com/heroku/x v0.0.26
 	github.com/joho/godotenv v1.3.0
-	github.com/olivere/elastic/v7 v7.0.24 // indirect
+	github.com/olivere/elastic/v7 v7.0.24
 	go.mongodb.org/mongo-driver v1.4.5
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
