@@ -90,12 +90,8 @@ func searchEndpoint(c *gin.Context) {
 	// Parse the request
 	query := c.Query("query")
 	if query == "" {
-		// errorResponse(c, http.StatusBadRequest, "Query not specified")
-		query = `{
-			"query": {
-			  "match_all": {}
-			}
-		  }`
+		errorResponse(c, http.StatusBadRequest, "Query not specified")
+		return
 	}
 
 	skip := 0
@@ -113,6 +109,7 @@ func searchEndpoint(c *gin.Context) {
 	result, err := elasticClient.Search().
 		Index(elasticIndexName).
 		Query(esQuery).
+		Sort("Title", true).
 		From(skip).Size(take).
 		Do(c.Request.Context())
 
@@ -127,7 +124,7 @@ func searchEndpoint(c *gin.Context) {
 		Hits: fmt.Sprintf("%d", result.Hits.TotalHits),
 	}
 
-	// The questions
+	// The questions response
 	docs := make([]models.QuestionResponse, 0)
 	for _, hit := range result.Hits.Hits {
 		var doc models.QuestionResponse

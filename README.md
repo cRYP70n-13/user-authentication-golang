@@ -57,6 +57,18 @@
 
     ```javascript
       GET localhost:8080/api/v1/questions?query=test
+    ```
+
+4. Post an answer to a question
+
+    ```javascript
+      POST localhost:8080/api/v1/answers
+
+      body: {
+        "title": "Answer title",
+        "answer": "The answer content"
+      }
+    ```
 
 ## The GoLang, MongoDB, ElasticSearch and JWT TODO ⛓
 
