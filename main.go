@@ -154,22 +154,11 @@ func main() {
 	router.Use(gin.Logger())
 
 	routes.AuthRoutes(router)
-	routes.UserRoutes(router)
-
-	// API-1
-	router.GET("/api-1", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": "Access granted for api-1"})
-	})
-
-	// API-2
-	router.GET("/api-2", func(c *gin.Context) {
-		c.JSON(200, gin.H{"success": "Access granted for api-2"})
-	})
 
 	// Elastic Search part
-	router.POST("/questions", CreateQuestionEndpoint)
-	router.POST("/answers", PostAnswer)
-	router.GET("/search", searchEndpoint)
+	router.POST("/api/v1/questions", CreateQuestionEndpoint)
+	router.POST("/api/v1/answers", PostAnswer)
+	router.GET("/api/v1/search", searchEndpoint)
 	if err = router.Run(":8080"); err != nil {
 		log.Fatal(err)
 	}
