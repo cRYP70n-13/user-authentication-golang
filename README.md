@@ -6,6 +6,7 @@
 
 1. Authentication
       * to get your authentication key you have first to create an account and to do so u have to:
+
       ``` javascript
           POST localhost:8080/api/v1/users/signup
 
@@ -17,24 +18,24 @@
             "phone": "0000000000"
           }
       ```
+
       * And then you have to send another POST request to login and get your key
+
       ``` javascript
-            POST localhost:8080/api/v1/users/signup
+            POST localhost:8080/api/v1/users/login
 
             body: {
-              "first_name": "Test",
-              "last_name": "User",
               "email": "testUserd@test.com",
-              "password": "123456",
-              "phone": "0000000000"
+              "password": "123456"
             }
       ```
+
       * Then as a response an Authentication Token will be provided
 
 2. Post a question
-
       * To post a simple question you have to put your authentication token in the header under the name: __*token*__ \
           And then you can post a question
+
       ``` javascript
             POST localhost:8080/api/v1/questions
 
@@ -51,6 +52,11 @@
               ]
             }
       ```
+
+3. Get All the questions and some basic pagination
+
+    ```javascript
+      GET localhost:8080/api/v1/questions?query=test
 
 ## The GoLang, MongoDB, ElasticSearch and JWT TODO ⛓
 

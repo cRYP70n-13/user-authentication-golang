@@ -90,9 +90,14 @@ func searchEndpoint(c *gin.Context) {
 	// Parse the request
 	query := c.Query("query")
 	if query == "" {
-		errorResponse(c, http.StatusBadRequest, "Query not specified")
-		return
+		// errorResponse(c, http.StatusBadRequest, "Query not specified")
+		query = `{
+			"query": {
+			  "match_all": {}
+			}
+		  }`
 	}
+
 	skip := 0
 	take := 10
 	if i, err := strconv.Atoi(c.Query("skip")); err == nil {
@@ -121,6 +126,8 @@ func searchEndpoint(c *gin.Context) {
 		Time: fmt.Sprintf("%d", result.TookInMillis),
 		Hits: fmt.Sprintf("%d", result.Hits.TotalHits),
 	}
+
+	// The questions
 	docs := make([]models.QuestionResponse, 0)
 	for _, hit := range result.Hits.Hits {
 		var doc models.QuestionResponse
