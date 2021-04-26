@@ -109,7 +109,6 @@ func searchEndpoint(c *gin.Context) {
 	result, err := elasticClient.Search().
 		Index(elasticIndexName).
 		Query(esQuery).
-		Sort("Title", true).
 		From(skip).Size(take).
 		Do(c.Request.Context())
 
